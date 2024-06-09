@@ -1,19 +1,15 @@
 {
-  "displayName": "Homebridge Dreo",
-  "name": "homebridge-dreo",
+  "displayName": "Homebridge Dreo - All Fans",
+  "name": "@kadenthomp36/homebridge-dreo",
   "version": "3.2.5",
   "description": "Homebridge Plugin for Dreo Smart Devices",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zyonse/homebridge-dreo.git"
+    "url": "git+https://github.com/KadenThomp36/homebridge-dreo"
   },
   "bugs": {
-    "url": "https://github.com/zyonse/homebridge-dreo/issues"
-  },
-  "funding": {
-    "type": "paypal",
-    "url": "https://paypal.me/zyonse"
+    "url": "https://github.com/KadenThomp36/homebridge-dreo/issues"
   },
   "engines": {
     "node": ">=14.18.1",
@@ -26,9 +22,7 @@
     "build": "rimraf ./dist && tsc",
     "prepublishOnly": "npm run lint && npm run build"
   },
-  "keywords": [
-    "homebridge-plugin"
-  ],
+  "keywords": ["homebridge-plugin"],
   "dependencies": {
     "axios": "^1.3.5",
     "crypto-js": "^4.1.1",

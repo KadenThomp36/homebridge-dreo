@@ -1,4 +1,12 @@
-import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
+import {
+  API,
+  DynamicPlatformPlugin,
+  Logger,
+  PlatformAccessory,
+  PlatformConfig,
+  Service,
+  Characteristic,
+} from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { FanAccessory } from './FanAccessory';
@@ -11,7 +19,8 @@ import DreoAPI from './DreoAPI';
  */
 export class DreoPlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
-  public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
+  public readonly Characteristic: typeof Characteristic =
+    this.api.hap.Characteristic;
 
   // this is used to track restored cached accessories
   public readonly accessories: PlatformAccessory[] = [];
@@ -83,7 +92,9 @@ export class DreoPlatform implements DynamicPlatformPlugin {
       auth.server = 'eu';
     } else {
       this.log.error('error, unknown region');
-      this.log.error('Please open a github issue and provide your Country and Region (shown above)');
+      this.log.error(
+        'Please open a github issue and provide your Country and Region (shown above)',
+      );
       return;
     }
 
@@ -100,7 +111,6 @@ export class DreoPlatform implements DynamicPlatformPlugin {
 
     // loop over the discovered devices and register each one if it has not already been registered
     for (const device of dreoDevices) {
-
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
@@ -108,7 +118,9 @@ export class DreoPlatform implements DynamicPlatformPlugin {
 
       // see if an accessory with the same uuid has already been registered and restored from
       // the cached devices we stored in the `configureAccessory` method above
-      const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
+      const existingAccessory = this.accessories.find(
+        (accessory) => accessory.UUID === uuid,
+      );
 
       // get initial device state
       const state = await new DreoAPI().getState(this, device.sn, auth);
@@ -119,24 +131,20 @@ export class DreoPlatform implements DynamicPlatformPlugin {
 
       if (existingAccessory) {
         // the accessory already exists
-        this.log.info('Restoring existing accessory from cache:', device.deviceName);
+        this.log.info(
+          'Restoring existing accessory from cache:',
+          device.deviceName,
+        );
 
         // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
         // existingAccessory.context.device = device;
         // this.api.updatePlatformAccessories([existingAccessory]);
 
-        // create the accessory handler for the restored accessory
-        // this is imported from `platformAccessory.ts`
-        switch (device.productName) {
-          case 'Tower Fan':
-          case 'Air Circulator':
-            new FanAccessory(this, existingAccessory, state, ws);
-            break;
-          case 'Heater':
-            this.log.error('error, unsupported device type:', device.productName);
-            break;
-          default:
-            this.log.error('error, unknown device type:', device.productName);
+        // if windlevel exists, device is a fan
+        if (state.windlevel !== undefined) {
+          new FanAccessory(this, existingAccessory, state, ws);
+        } else {
+          this.log.error('error, unknown device type:', device.productName);
         }
 
         // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
@@ -148,7 +156,10 @@ export class DreoPlatform implements DynamicPlatformPlugin {
         this.log.info('Adding new accessory:', device.deviceName);
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory(device.deviceName, uuid);
+        const accessory = new this.api.platformAccessory(
+          device.deviceName,
+          uuid,
+        );
 
         // store a copy of the device object in the `accessory.context`
         // the `context` property can be used to store any data about the accessory you may need
@@ -164,14 +175,19 @@ export class DreoPlatform implements DynamicPlatformPlugin {
             new FanAccessory(this, accessory, state, ws);
             break;
           case 'Heater':
-            this.log.error('error, unsupported device type:', device.productName);
+            this.log.error(
+              'error, unsupported device type:',
+              device.productName,
+            );
             break;
           default:
             this.log.error('error, unknown device type:', device.productName);
         }
 
         // link the accessory to your platform
-        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
+          accessory,
+        ]);
       }
     }
   }
