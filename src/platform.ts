@@ -146,7 +146,7 @@ export class DreoPlatform implements DynamicPlatformPlugin {
           case 'Tower Fan':
           case 'Air Circulator':
           case 'Ceiling Fan':
-            console.log('FIRST STATE', this, existingAccessory, state, ws);
+            this.log.warn('FIRST STATE', this, existingAccessory, state, ws);
             new FanAccessory(this, existingAccessory, state, ws);
             break;
           case 'Heater':
