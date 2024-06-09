@@ -140,11 +140,22 @@ export class DreoPlatform implements DynamicPlatformPlugin {
         // existingAccessory.context.device = device;
         // this.api.updatePlatformAccessories([existingAccessory]);
 
-        // if windlevel exists, device is a fan
-        if (state.windlevel !== undefined) {
-          new FanAccessory(this, existingAccessory, state, ws);
-        } else {
-          this.log.error('error, unknown device type:', device.productName);
+        // create the accessory handler for the restored accessory
+        // this is imported from `platformAccessory.ts`
+        switch (device.productName) {
+          case 'Tower Fan':
+          case 'Air Circulator':
+          case 'Ceiling Fan':
+            new FanAccessory(this, existingAccessory, state, ws);
+            break;
+          case 'Heater':
+            this.log.error(
+              'error, unsupported device type:',
+              device.productName,
+            );
+            break;
+          default:
+            this.log.error('error, unknown device type:', device.productName);
         }
 
         // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
