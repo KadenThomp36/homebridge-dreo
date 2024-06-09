@@ -49,7 +49,7 @@ export class FanAccessory {
       accessory.context.device.controlsConf.control[1].items[1].text;
     platform.log.debug('State:', state);
     // load current state from Dreo servers
-    this.fanState.On = state.poweron.state;
+    this.fanState.On = state.fanon.state;
     this.fanState.Speed =
       (state.windlevel.state * 100) / this.fanState.MaxSpeed;
 
@@ -102,12 +102,12 @@ export class FanAccessory {
           data.method === 'report'
         ) {
           switch (Object.keys(data.reported)[0]) {
-            case 'poweron':
-              this.fanState.On = data.reported.poweron;
+            case 'fanon':
+              this.fanState.On = data.reported.fanon;
               this.service
                 .getCharacteristic(this.platform.Characteristic.Active)
                 .updateValue(this.fanState.On);
-              this.platform.log.debug('Fan power:', data.reported.poweron);
+              this.platform.log.debug('Fan power:', data.reported.fanon);
               break;
             case 'windlevel':
               this.fanState.Speed =
@@ -177,7 +177,7 @@ export class FanAccessory {
         JSON.stringify({
           devicesn: this.accessory.context.device.sn,
           method: 'control',
-          params: { poweron: Boolean(value) },
+          params: { fanon: Boolean(value) },
           timestamp: Date.now(),
         }),
       );
@@ -201,8 +201,8 @@ export class FanAccessory {
           devicesn: this.accessory.context.device.sn,
           method: 'control',
           params: {
-            // setting poweron to true prevents fan speed from being overriden
-            poweron: true,
+            // setting fanon to true prevents fan speed from being overriden
+            fanon: true,
             windlevel: converted,
           },
           timestamp: Date.now(),
