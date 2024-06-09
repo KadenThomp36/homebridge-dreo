@@ -42,6 +42,7 @@ export class FanAccessory {
         accessory.context.device.sn,
       );
 
+    platform.log.warn('HERE IS THE CURRENT STATE', state);
     // initialize fan values
     // get max fan speed from config
     this.fanState.MaxSpeed =
