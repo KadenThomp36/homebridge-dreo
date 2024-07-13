@@ -164,14 +164,14 @@ export class FanAccessory {
             case 'lighton':
               this.fanState.LightOn = data.reported.lighton;
               this.lightService
-                .getCharacteristic(this.platform.Characteristic.On)
+                ?.getCharacteristic(this.platform.Characteristic.On)
                 .updateValue(this.fanState.LightOn);
               this.platform.log.debug('Light on:', data.reported.lighton);
               break;
             case 'brightness':
               this.fanState.Brightness = data.reported.brightness;
               this.lightService
-                .getCharacteristic(this.platform.Characteristic.Brightness)
+                ?.getCharacteristic(this.platform.Characteristic.Brightness)
                 .updateValue(this.fanState.Brightness);
               this.platform.log.debug('Brightness:', data.reported.brightness);
               break;
