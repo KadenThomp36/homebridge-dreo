@@ -1,13 +1,9 @@
 import { Service, PlatformAccessory } from 'homebridge';
 import { DreoPlatform } from './platform';
 
-/**
- * Platform Accessory
- * An instance of this class is created for each accessory your platform registers
- * Each accessory may expose multiple services of different service types.
- */
 export class FanAccessory {
   private service: Service;
+  private lightService?: Service;
   private temperatureService?: Service;
 
   // Cached copy of latest fan states
@@ -15,9 +11,11 @@ export class FanAccessory {
     On: false,
     Speed: 1,
     Swing: false,
-    SwingMethod: 'shakehorizon', // some fans use hoscon instead of shakehorizon to control swing mode
+    SwingMethod: 'shakehorizon',
     MaxSpeed: 1,
     Temperature: 0,
+    LightOn: false, // Add light state
+    Brightness: 100, // Add light brightness state
   };
 
   constructor(
@@ -42,60 +40,67 @@ export class FanAccessory {
         accessory.context.device.sn,
       );
 
-    platform.log.warn('HERE IS THE CURRENT STATE', state);
     // initialize fan values
-    // get max fan speed from config
     this.fanState.MaxSpeed =
       accessory.context.device.controlsConf.control[1].items[1].text;
-    platform.log.debug('State:', state);
-    // load current state from Dreo servers
     this.fanState.On = state.fanon.state;
     this.fanState.Speed =
       (state.windlevel.state * 100) / this.fanState.MaxSpeed;
+    this.fanState.LightOn = state.lighton.state;
+    this.fanState.Brightness = state.brightness.state;
 
-    // get the Fanv2 service if it exists, otherwise create a new Fanv2 service
-    // you can create multiple services for each accessory
+    // Initialize Fanv2 service
     this.service =
       this.accessory.getService(this.platform.Service.Fanv2) ||
       this.accessory.addService(this.platform.Service.Fanv2);
 
-    // set the service name, this is what is displayed as the default name on the Home app
-    // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
     this.service.setCharacteristic(
       this.platform.Characteristic.Name,
       accessory.context.device.deviceName,
     );
 
-    // each service must implement at-minimum the "required characteristics" for the given service type
-    // see https://developers.homebridge.io/#/service/Fanv2
-    // register handlers for the Active Characteristic
     this.service
       .getCharacteristic(this.platform.Characteristic.Active)
       .onSet(this.handleActiveSet.bind(this))
       .onGet(this.handleActiveGet.bind(this));
 
-    // register handlers for the RotationSpeed Characteristic
     this.service
       .getCharacteristic(this.platform.Characteristic.RotationSpeed)
       .setProps({
-        // setting minStep defines fan speed steps in HomeKit
         minStep: 100 / this.fanState.MaxSpeed,
       })
       .onSet(this.setRotationSpeed.bind(this))
       .onGet(this.getRotationSpeed.bind(this));
 
-    const shouldHideTemperatureSensor =
-      this.platform.config.hideTemperatureSensor || false; // default to false if not defined
+    // Initialize Lightbulb service
+    this.lightService =
+      this.accessory.getService(this.platform.Service.Lightbulb) ||
+      this.accessory.addService(this.platform.Service.Lightbulb);
 
-    // update values from Dreo app
+    this.lightService.setCharacteristic(
+      this.platform.Characteristic.Name,
+      accessory.context.device.deviceName + ' Light',
+    );
+
+    this.lightService
+      .getCharacteristic(this.platform.Characteristic.On)
+      .onSet(this.setLightOn.bind(this))
+      .onGet(this.getLightOn.bind(this));
+
+    this.lightService
+      .getCharacteristic(this.platform.Characteristic.Brightness)
+      .onSet(this.setBrightness.bind(this))
+      .onGet(this.getBrightness.bind(this));
+
+    const shouldHideTemperatureSensor =
+      this.platform.config.hideTemperatureSensor || false;
+
     ws.addEventListener('message', (message) => {
       const data = JSON.parse(message.data);
 
-      // check if message applies to this device
       if (data.devicesn === accessory.context.device.sn) {
         platform.log.debug('Incoming %s', message.data);
 
-        // check if we need to update fan state in homekit
         if (
           data.method === 'control-report' ||
           data.method === 'control-reply' ||
@@ -156,6 +161,20 @@ export class FanAccessory {
                 data.reported.temperature,
               );
               break;
+            case 'lighton':
+              this.fanState.LightOn = data.reported.lighton;
+              this.lightService
+                .getCharacteristic(this.platform.Characteristic.On)
+                .updateValue(this.fanState.LightOn);
+              this.platform.log.debug('Light on:', data.reported.lighton);
+              break;
+            case 'brightness':
+              this.fanState.Brightness = data.reported.brightness;
+              this.lightService
+                .getCharacteristic(this.platform.Characteristic.Brightness)
+                .updateValue(this.fanState.Brightness);
+              this.platform.log.debug('Brightness:', data.reported.brightness);
+              break;
             default:
               platform.log.debug(
                 'Unknown command received:',
@@ -167,12 +186,9 @@ export class FanAccessory {
     });
   }
 
-  // Handle requests to set the "Active" characteristic
   handleActiveSet(value) {
     this.platform.log.debug('Triggered SET Active:', value);
-    // check state to prevent duplicate requests
     if (this.fanState.On !== Boolean(value)) {
-      // send to Dreo server via websocket
       this.ws.send(
         JSON.stringify({
           devicesn: this.accessory.context.device.sn,
@@ -184,16 +200,12 @@ export class FanAccessory {
     }
   }
 
-  // Handle requests to get the current value of the "Active" characteristic
   handleActiveGet() {
     return this.fanState.On;
   }
 
-  // Handle requests to set the fan speed
   async setRotationSpeed(value) {
-    // rotation speed needs to be scaled from HomeKit's percentage value (Dreo app uses whole numbers, ex. 1-6)
     const converted = Math.round((value * this.fanState.MaxSpeed) / 100);
-    // avoid setting speed to 0 (illegal value)
     if (converted !== 0) {
       this.platform.log.debug('Setting fan speed:', converted);
       this.ws.send(
@@ -201,7 +213,6 @@ export class FanAccessory {
           devicesn: this.accessory.context.device.sn,
           method: 'control',
           params: {
-            // setting fanon to true prevents fan speed from being overriden
             fanon: true,
             windlevel: converted,
           },
@@ -215,7 +226,6 @@ export class FanAccessory {
     return this.fanState.Speed;
   }
 
-  // turn oscillation on/off
   async setSwingMode(value) {
     this.ws.send(
       JSON.stringify({
@@ -236,8 +246,39 @@ export class FanAccessory {
   }
 
   correctedTemperature(temperatureFromDreo) {
-    const offset = this.platform.config.temperatureOffset || 0; // default to 0 if not defined
-    // Dreo response is always Fahrenheit - convert to Celsius which is what HomeKit expects
+    const offset = this.platform.config.temperatureOffset || 0;
     return ((temperatureFromDreo + offset - 32) * 5) / 9;
+  }
+
+  async setLightOn(value) {
+    this.platform.log.debug('Triggered SET Light On:', value);
+    this.ws.send(
+      JSON.stringify({
+        devicesn: this.accessory.context.device.sn,
+        method: 'control',
+        params: { lighton: Boolean(value) },
+        timestamp: Date.now(),
+      }),
+    );
+  }
+
+  async getLightOn() {
+    return this.fanState.LightOn;
+  }
+
+  async setBrightness(value) {
+    this.platform.log.debug('Triggered SET Brightness:', value);
+    this.ws.send(
+      JSON.stringify({
+        devicesn: this.accessory.context.device.sn,
+        method: 'control',
+        params: { brightness: value },
+        timestamp: Date.now(),
+      }),
+    );
+  }
+
+  async getBrightness() {
+    return this.fanState.Brightness;
   }
 }
