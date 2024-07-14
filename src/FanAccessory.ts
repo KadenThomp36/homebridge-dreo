@@ -41,6 +41,8 @@ export class FanAccessory {
       );
 
     // initialize fan values
+    this.platform.log.debug('chung wu:', accessory.context.device.controlsConf);
+
     this.fanState.MaxSpeed =
       accessory.context.device.controlsConf.control[1].items[1].text;
     this.platform.log.debug('Setting MaxSpeed:', this.fanState.MaxSpeed);
