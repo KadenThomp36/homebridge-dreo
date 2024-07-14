@@ -182,6 +182,7 @@ export class DreoPlatform implements DynamicPlatformPlugin {
         switch (device.productName) {
           case 'Tower Fan':
           case 'Air Circulator':
+          case 'Ceiling Fan':
             // create the accessory handler for the newly create accessory
             // this is imported from `platformAccessory.ts`
             new FanAccessory(this, accessory, state, ws);
