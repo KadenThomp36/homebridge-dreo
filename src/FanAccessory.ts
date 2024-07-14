@@ -205,7 +205,36 @@ export class FanAccessory {
   }
 
   async setRotationSpeed(value) {
-    const converted = Math.round((value * this.fanState.MaxSpeed) / 100);
+    this.platform.log.debug('Received rotation speed value:', value);
+
+    // Ensure value is a number
+    const rotationSpeed = parseFloat(value);
+    if (isNaN(rotationSpeed)) {
+      this.platform.log.error('Invalid rotation speed value:', value);
+      return;
+    }
+
+    // Ensure MaxSpeed is defined and a number
+    const maxSpeed = this.fanState.MaxSpeed;
+    if (isNaN(maxSpeed)) {
+      this.platform.log.error(
+        'Invalid max speed value:',
+        this.fanState.MaxSpeed,
+      );
+      return;
+    }
+
+    // Convert value
+    const converted = Math.round((rotationSpeed * maxSpeed) / 100);
+    this.platform.log.debug('Converted fan speed:', converted);
+
+    // Check if the converted speed is valid
+    if (isNaN(converted)) {
+      this.platform.log.error('Converted fan speed is NaN');
+      return;
+    }
+
+    // Handle non-zero speed
     if (converted !== 0) {
       this.platform.log.debug('Setting fan speed:', converted);
       this.ws.send(
@@ -219,6 +248,8 @@ export class FanAccessory {
           timestamp: Date.now(),
         }),
       );
+    } else {
+      this.platform.log.debug('Fan speed is zero, not sending command.');
     }
   }
 
