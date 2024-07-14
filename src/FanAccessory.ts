@@ -12,7 +12,7 @@ export class FanAccessory {
     Speed: 1,
     Swing: false,
     SwingMethod: 'shakehorizon',
-    MaxSpeed: 1,
+    MaxSpeed: 12,
     Temperature: 0,
     LightOn: false, // Add light state
     Brightness: 100, // Add light brightness state
@@ -43,6 +43,8 @@ export class FanAccessory {
     // initialize fan values
     this.fanState.MaxSpeed =
       accessory.context.device.controlsConf.control[1].items[1].text;
+    this.platform.log.debug('Setting MaxSpeed:', this.fanState.MaxSpeed);
+
     this.fanState.On = state.fanon.state;
     this.fanState.Speed =
       (state.windlevel.state * 100) / this.fanState.MaxSpeed;
