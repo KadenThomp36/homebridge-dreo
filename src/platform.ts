@@ -7,7 +7,6 @@ import {
   Service,
   Characteristic,
 } from 'homebridge';
-
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
 import { FanAccessory } from './FanAccessory';
 import DreoAPI from './DreoAPI';
@@ -143,17 +142,8 @@ export class DreoPlatform implements DynamicPlatformPlugin {
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
         switch (device.productName) {
-          case 'Tower Fan':
-          case 'Air Circulator':
           case 'Ceiling Fan':
-            this.log.warn('FIRST STATE', this, existingAccessory, state, ws);
             new FanAccessory(this, existingAccessory, state, ws);
-            break;
-          case 'Heater':
-            this.log.error(
-              'error, unsupported device type:',
-              device.productName,
-            );
             break;
           default:
             this.log.error('error, unknown device type:', device.productName);
@@ -180,18 +170,8 @@ export class DreoPlatform implements DynamicPlatformPlugin {
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
         switch (device.productName) {
-          case 'Tower Fan':
-          case 'Air Circulator':
           case 'Ceiling Fan':
-            // create the accessory handler for the newly create accessory
-            // this is imported from `platformAccessory.ts`
             new FanAccessory(this, accessory, state, ws);
-            break;
-          case 'Heater':
-            this.log.error(
-              'error, unsupported device type:',
-              device.productName,
-            );
             break;
           default:
             this.log.error('error, unknown device type:', device.productName);

@@ -4,18 +4,14 @@ import { DreoPlatform } from './platform';
 export class FanAccessory {
   private service: Service;
   private lightService?: Service;
-  private temperatureService?: Service;
 
   // Cached copy of latest fan states
   private fanState = {
     On: false,
     Speed: 1,
-    Swing: false,
-    SwingMethod: 'shakehorizon',
     MaxSpeed: 12,
-    Temperature: 0,
-    LightOn: false, // Add light state
-    Brightness: 100, // Add light brightness state
+    LightOn: false,
+    Brightness: 100,
   };
 
   constructor(
@@ -41,10 +37,6 @@ export class FanAccessory {
       );
 
     // initialize fan values
-
-    this.fanState.MaxSpeed = 12;
-    this.platform.log.debug('Setting MaxSpeed:', this.fanState.MaxSpeed);
-
     this.fanState.On = state.fanon.state;
     this.fanState.Speed =
       (state.windlevel.state * 100) / this.fanState.MaxSpeed;
@@ -94,9 +86,6 @@ export class FanAccessory {
       .onSet(this.setBrightness.bind(this))
       .onGet(this.getBrightness.bind(this));
 
-    const shouldHideTemperatureSensor =
-      this.platform.config.hideTemperatureSensor || false;
-
     ws.addEventListener('message', (message) => {
       const data = JSON.parse(message.data);
 
@@ -123,45 +112,6 @@ export class FanAccessory {
                 .getCharacteristic(this.platform.Characteristic.RotationSpeed)
                 .updateValue(this.fanState.Speed);
               this.platform.log.debug('Fan speed:', data.reported.windlevel);
-              break;
-            case 'shakehorizon':
-              this.fanState.Swing = data.reported.shakehorizon;
-              this.service
-                .getCharacteristic(this.platform.Characteristic.SwingMode)
-                .updateValue(this.fanState.Swing);
-              this.platform.log.debug(
-                'Oscillation mode:',
-                data.reported.shakehorizon,
-              );
-              break;
-            case 'hoscon':
-              this.fanState.Swing = data.reported.hoscon;
-              this.service
-                .getCharacteristic(this.platform.Characteristic.SwingMode)
-                .updateValue(this.fanState.Swing);
-              this.platform.log.debug(
-                'Oscillation mode:',
-                data.reported.hoscon,
-              );
-              break;
-            case 'temperature':
-              if (
-                this.temperatureService !== undefined &&
-                !shouldHideTemperatureSensor
-              ) {
-                this.fanState.Temperature = this.correctedTemperature(
-                  data.reported.temperature,
-                );
-                this.temperatureService
-                  .getCharacteristic(
-                    this.platform.Characteristic.CurrentTemperature,
-                  )
-                  .updateValue(this.fanState.Temperature);
-              }
-              this.platform.log.debug(
-                'Temperature:',
-                data.reported.temperature,
-              );
               break;
             case 'lighton':
               this.fanState.LightOn = data.reported.lighton;
@@ -257,30 +207,6 @@ export class FanAccessory {
 
   async getRotationSpeed() {
     return this.fanState.Speed;
-  }
-
-  async setSwingMode(value) {
-    this.ws.send(
-      JSON.stringify({
-        devicesn: this.accessory.context.device.sn,
-        method: 'control',
-        params: { [this.fanState.SwingMethod]: Boolean(value) },
-        timestamp: Date.now(),
-      }),
-    );
-  }
-
-  async getSwingMode() {
-    return this.fanState.Swing;
-  }
-
-  async getTemperature() {
-    return this.fanState.Temperature;
-  }
-
-  correctedTemperature(temperatureFromDreo) {
-    const offset = this.platform.config.temperatureOffset || 0;
-    return ((temperatureFromDreo + offset - 32) * 5) / 9;
   }
 
   async setLightOn(value) {
